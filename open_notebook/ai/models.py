@@ -122,6 +122,16 @@ class ModelManager:
         if model.credential:
             credential = await model.get_credential_obj()
             if credential:
+                # Just-in-time refresh of subscription-OAuth access tokens.
+                # No-op for plain api_key credentials.
+                try:
+                    from open_notebook.oauth.store import refresh_credential_if_needed
+
+                    await refresh_credential_if_needed(credential)
+                except Exception as e:
+                    logger.warning(
+                        f"OAuth refresh check failed for credential {credential.id}: {e}"
+                    )
                 config = credential.to_esperanto_config()
                 logger.debug(
                     f"Using credential '{credential.name}' for model {model.name}"
