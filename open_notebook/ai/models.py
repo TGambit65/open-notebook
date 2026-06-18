@@ -136,6 +136,27 @@ class ModelManager:
                 logger.debug(
                     f"Using credential '{credential.name}' for model {model.name}"
                 )
+                # Subscription-OAuth providers whose bearer + first-party
+                # impersonation can't be expressed through Esperanto get a
+                # custom client (e.g. Claude needs Claude-Code masquerade).
+                from open_notebook.oauth.store import get_oauth_meta
+
+                oauth_meta = get_oauth_meta(credential)
+                if (
+                    oauth_meta
+                    and model.type == "language"
+                    and oauth_meta.get("wire_format") == "anthropic_messages"
+                ):
+                    from open_notebook.oauth.anthropic_langchain import (
+                        build_claude_oauth_model,
+                    )
+
+                    access = (
+                        credential.api_key.get_secret_value()
+                        if credential.api_key
+                        else ""
+                    )
+                    return build_claude_oauth_model(model.name, access, kwargs)
             else:
                 logger.warning(
                     f"Model {model.id} has credential {model.credential} but it could not be loaded. "

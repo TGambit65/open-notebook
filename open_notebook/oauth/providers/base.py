@@ -63,6 +63,7 @@ class ProviderSpec:
     extra_authorize_params: dict[str, str] = field(default_factory=dict)
     token_request_style: str = "form"  # "form" | "json"
     echo_challenge_in_token: bool = False  # xAI re-validates the challenge
+    include_state_in_token: bool = False  # Anthropic requires state at exchange
     uses_loopback: bool = True
     # Inference wire format, so the integration layer knows whether the OAuth
     # bearer can ride Esperanto's normal client ("openai_chat") or needs a
@@ -110,7 +111,9 @@ class OAuthProvider:
         return f"{self.spec.authorize_url}?{urlencode(params)}"
 
     # -- token exchange / refresh -------------------------------------------
-    def exchange_code(self, code: str, verifier: str, challenge: str) -> OAuthTokens:
+    def exchange_code(
+        self, code: str, verifier: str, challenge: str, state: Optional[str] = None
+    ) -> OAuthTokens:
         self._resolve_endpoints()
         body = {
             "grant_type": "authorization_code",
@@ -122,6 +125,8 @@ class OAuthProvider:
         if self.spec.echo_challenge_in_token:
             body["code_challenge"] = challenge
             body["code_challenge_method"] = "S256"
+        if self.spec.include_state_in_token and state:
+            body["state"] = state
         return self._token_request(body)
 
     def refresh(self, refresh_token: str) -> OAuthTokens:

@@ -34,6 +34,14 @@ def _parse_redirect(pasted: str, expected_state: str) -> str:
         if state and state != expected_state:
             raise OAuthError("State mismatch — possible CSRF; aborting")
         return code
+    # Anthropic returns `<code>#<state>` for manual paste.
+    if "#" in pasted:
+        code, _, state = pasted.partition("#")
+        if not code:
+            raise OAuthError("No code in pasted value")
+        if state and state != expected_state:
+            raise OAuthError("State mismatch — possible CSRF; aborting")
+        return code
     # Fallback: user pasted just the code.
     if not pasted:
         raise OAuthError("No code provided")
@@ -74,7 +82,7 @@ def run_login(provider_id: str, *, paste: bool = False, timeout: float = 300.0) 
     else:
         code = _paste_flow(authorize_url, state)
 
-    return provider.exchange_code(code, verifier, challenge)
+    return provider.exchange_code(code, verifier, challenge, state=state)
 
 
 def _present_url(url: str, *, open_browser: bool) -> None:
