@@ -25,6 +25,8 @@ from langchain_anthropic import ChatAnthropic
 from loguru import logger
 from pydantic import Field
 
+from open_notebook.oauth.lc_shim import LangchainPassthrough
+
 CLAUDE_CODE_SYSTEM = "You are Claude Code, Anthropic's official CLI for Claude."
 
 # oauth-2025-04-20 + claude-code-20250219 are the gate for subscription OAuth;
@@ -113,22 +115,11 @@ class ClaudeCodeChatAnthropic(ChatAnthropic):
         return payload
 
 
-class _LangchainPassthrough:
-    """Minimal Esperanto-shaped shim: ModelManager returns this; callers do
-    ``.to_langchain()`` to get the underlying chat model."""
-
-    def __init__(self, lc_model: ClaudeCodeChatAnthropic):
-        self._lc_model = lc_model
-
-    def to_langchain(self) -> ClaudeCodeChatAnthropic:
-        return self._lc_model
-
-
 def build_claude_oauth_model(
     model_name: str,
     access_token: str,
     extra_kwargs: Optional[dict[str, Any]] = None,
-) -> _LangchainPassthrough:
+) -> LangchainPassthrough:
     """Build the OAuth-authenticated Claude chat model (wrapped for ModelManager)."""
     kwargs: dict[str, Any] = {"model": model_name, "max_tokens": DEFAULT_MAX_TOKENS}
     for key in ("temperature", "top_p", "max_tokens"):
@@ -136,4 +127,4 @@ def build_claude_oauth_model(
             kwargs[key] = extra_kwargs[key]
     logger.debug(f"Building Claude OAuth model '{model_name}' (Claude Code impersonation)")
     lc_model = ClaudeCodeChatAnthropic(oauth_access_token=access_token, **kwargs)
-    return _LangchainPassthrough(lc_model)
+    return LangchainPassthrough(lc_model)

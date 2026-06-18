@@ -6,7 +6,7 @@ module next to this one that exposes a `SPEC` and registering it below.
 
 from __future__ import annotations
 
-from open_notebook.oauth.providers import anthropic, xai
+from open_notebook.oauth.providers import anthropic, openai_codex, xai
 from open_notebook.oauth.providers.base import (
     OAuthError,
     OAuthProvider,
@@ -17,6 +17,7 @@ from open_notebook.oauth.providers.base import (
 _SPECS: dict[str, ProviderSpec] = {
     xai.SPEC.id: xai.SPEC,
     anthropic.SPEC.id: anthropic.SPEC,
+    openai_codex.SPEC.id: openai_codex.SPEC,
 }
 
 

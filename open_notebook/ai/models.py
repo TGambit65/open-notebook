@@ -142,21 +142,28 @@ class ModelManager:
                 from open_notebook.oauth.store import get_oauth_meta
 
                 oauth_meta = get_oauth_meta(credential)
-                if (
-                    oauth_meta
-                    and model.type == "language"
-                    and oauth_meta.get("wire_format") == "anthropic_messages"
+                wire_format = oauth_meta.get("wire_format") if oauth_meta else None
+                if oauth_meta and model.type == "language" and wire_format not in (
+                    None,
+                    "openai_chat",
                 ):
-                    from open_notebook.oauth.anthropic_langchain import (
-                        build_claude_oauth_model,
-                    )
-
                     access = (
                         credential.api_key.get_secret_value()
                         if credential.api_key
                         else ""
                     )
-                    return build_claude_oauth_model(model.name, access, kwargs)
+                    if wire_format == "anthropic_messages":
+                        from open_notebook.oauth.anthropic_langchain import (
+                            build_claude_oauth_model,
+                        )
+
+                        return build_claude_oauth_model(model.name, access, kwargs)
+                    if wire_format == "openai_responses_codex":
+                        from open_notebook.oauth.openai_codex_langchain import (
+                            build_codex_oauth_model,
+                        )
+
+                        return build_codex_oauth_model(model.name, access, kwargs)
             else:
                 logger.warning(
                     f"Model {model.id} has credential {model.credential} but it could not be loaded. "
