@@ -28,7 +28,11 @@ SPEC = ProviderSpec(
     redirect_uri="http://localhost:1455/auth/callback",
     redirect_port=1455,
     redirect_path="/auth/callback",
-    esperanto_provider="openai",
+    # Distinct from "openai" on purpose: inference is intercepted by
+    # ModelManager (wire_format dispatch), not Esperanto, and a plain "openai"
+    # label makes Open Notebook auto-seed standard OpenAI models against this
+    # credential that would wrongly route to the codex backend.
+    esperanto_provider="openai-codex",
     inference_base_url="https://chatgpt.com/backend-api/codex",
     authorize_url="https://auth.openai.com/oauth/authorize",
     token_url="https://auth.openai.com/oauth/token",
