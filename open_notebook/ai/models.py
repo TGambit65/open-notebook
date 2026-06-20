@@ -122,10 +122,48 @@ class ModelManager:
         if model.credential:
             credential = await model.get_credential_obj()
             if credential:
+                # Just-in-time refresh of subscription-OAuth access tokens.
+                # No-op for plain api_key credentials.
+                try:
+                    from open_notebook.oauth.store import refresh_credential_if_needed
+
+                    await refresh_credential_if_needed(credential)
+                except Exception as e:
+                    logger.warning(
+                        f"OAuth refresh check failed for credential {credential.id}: {e}"
+                    )
                 config = credential.to_esperanto_config()
                 logger.debug(
                     f"Using credential '{credential.name}' for model {model.name}"
                 )
+                # Subscription-OAuth providers whose bearer + first-party
+                # impersonation can't be expressed through Esperanto get a
+                # custom client (e.g. Claude needs Claude-Code masquerade).
+                from open_notebook.oauth.store import get_oauth_meta
+
+                oauth_meta = get_oauth_meta(credential)
+                wire_format = oauth_meta.get("wire_format") if oauth_meta else None
+                if oauth_meta and model.type == "language" and wire_format not in (
+                    None,
+                    "openai_chat",
+                ):
+                    access = (
+                        credential.api_key.get_secret_value()
+                        if credential.api_key
+                        else ""
+                    )
+                    if wire_format == "anthropic_messages":
+                        from open_notebook.oauth.anthropic_langchain import (
+                            build_claude_oauth_model,
+                        )
+
+                        return build_claude_oauth_model(model.name, access, kwargs)
+                    if wire_format == "openai_responses_codex":
+                        from open_notebook.oauth.openai_codex_langchain import (
+                            build_codex_oauth_model,
+                        )
+
+                        return build_codex_oauth_model(model.name, access, kwargs)
             else:
                 logger.warning(
                     f"Model {model.id} has credential {model.credential} but it could not be loaded. "
