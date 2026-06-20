@@ -142,3 +142,5 @@ specs/
 .harness/
 
 .mcp.json
+# Local dev compose override (bind-mounts source; not for production)
+docker-compose.override.yml
